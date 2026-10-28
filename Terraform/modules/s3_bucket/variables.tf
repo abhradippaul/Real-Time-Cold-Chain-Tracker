@@ -8,3 +8,9 @@ variable "tags" {
   description = "Tags to apply to the S3 bucket."
   default     = {}
 }
+
+variable "lambda_function_arn" {
+  type        = string
+  description = "The ARN of the Lambda function."
+}
+

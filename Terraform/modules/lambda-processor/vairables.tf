@@ -28,3 +28,14 @@ variable "tags" {
   description = "Tags to apply to the Lambda function."
   default     = {}
 }
+
+variable "log_retention_days" {
+  type        = number
+  description = "The number of days to retain the log group."
+  default     = 14
+}
+
+variable "sqs_arn" {
+  type        = string
+  description = "The ARN of the SQS queue."
+}

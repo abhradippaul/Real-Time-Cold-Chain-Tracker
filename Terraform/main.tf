@@ -23,9 +23,12 @@ module "lambda_module_processor" {
   runtime       = var.lambda_runtime
   tags          = var.tags
   sqs_arn       = module.sqs_module.sqs_queue_arn
+  dynamodb_arn  = module.dynamodb_table_module.arn
+  sns_arn       = module.sns_module.sns_arn
   environment_variables = {
-    "QUEUE_URL" = module.sqs_module.sqs_queue_url
-
+    "QUEUE_URL"           = module.sqs_module.sqs_queue_url
+    "DYNAMODB_TABLE_NAME" = module.dynamodb_table_module.name
+    "TOPIC_ARN"           = module.sns_module.sns_arn
   }
 }
 
@@ -40,6 +43,28 @@ module "sqs_module" {
   visibility_timeout_seconds = var.sqs_queue_visibility_timeout_seconds
   tags                       = var.tags
   source_arn                 = module.lambda_module_validator.lambda_function_arn
+}
+
+module "dynamodb_table_module" {
+  source = "./modules/dynamodb"
+
+  hash_key  = var.dynamodb_hash_key
+  range_key = var.dynamodb_range_key
+  tags      = var.tags
+  name      = var.dynamodb_table_name
+}
+
+module "sns_module" {
+  source   = "./modules/sns"
+  sns_name = var.sns_name
+  tags     = var.tags
+}
+
+module "database_module" {
+  source      = "./modules/database"
+  db_name     = var.database_name
+  db_username = var.database_username
+  tags        = var.tags
 }
 
 module "s3_bucket_module" {

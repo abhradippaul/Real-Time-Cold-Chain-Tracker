@@ -1,3 +1,6 @@
 .terraform
 *.zip
 *png
+venv
+build
+package

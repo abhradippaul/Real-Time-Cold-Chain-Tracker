@@ -39,3 +39,13 @@ variable "sqs_arn" {
   type        = string
   description = "The ARN of the SQS queue."
 }
+
+variable "dynamodb_arn" {
+  type        = string
+  description = "The ARN of the DynamoDB table."
+}
+
+variable "sns_arn" {
+  type        = string
+  description = "The ARN of the SNS topic."
+}

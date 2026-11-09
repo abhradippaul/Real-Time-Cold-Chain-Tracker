@@ -22,31 +22,53 @@ resource "aws_iam_role_policy_attachment" "lambda_basic_execution" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-# resource "aws_iam_role_policy" "lambda_dynamodb_put" {
-#   name = "lambda_dynamodb_put_policy"
-#   role = aws_iam_role.this.id
+resource "aws_iam_role_policy_attachment" "lambda_sqs_execution" {
+  role       = aws_iam_role.this.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaSQSQueueExecutionRole"
+}
 
-#   policy = jsonencode({
-#     Version = "2012-10-17"
-#     Statement = [
-#       {
-#         Effect = "Allow"
-#         Action = [
-#           "s3:GetObject"
-#         ]
-#         Resource = "${var.s3_bucket_arn}/*"
-#       }
-#     ]
-#   })
-# }
+data "aws_iam_policy_document" "lambda_dynamodb_put_policy" {
+  statement {
+    effect = "Allow"
 
-# resource "aws_lambda_permission" "allow_bucket" {
-#   statement_id  = "AllowExecutionFromS3Bucket"
-#   action        = "lambda:InvokeFunction"
-#   function_name = aws_lambda_function.this.arn
-#   principal     = "s3.amazonaws.com"
-#   source_arn    = var.s3_bucket_arn
-# }
+    # principals {
+    #   type        = "Service"
+    #   identifiers = ["dynamodb.amazonaws.com"]
+    # }
+
+    actions   = ["dynamodb:PutItem"]
+    resources = [var.dynamodb_arn]
+  }
+}
+
+resource "aws_iam_policy" "lambda_dynamodb_put_policy" {
+  name   = "lambda_dynamodb_put_policy"
+  policy = data.aws_iam_policy_document.lambda_dynamodb_put_policy.json
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_dynamodb" {
+  role       = aws_iam_role.this.name
+  policy_arn = aws_iam_policy.lambda_dynamodb_put_policy.arn
+}
+
+data "aws_iam_policy_document" "lambda_sns_policy" {
+  statement {
+    effect = "Allow"
+
+    actions   = ["sns:Publish"]
+    resources = [var.sns_arn]
+  }
+}
+
+resource "aws_iam_policy" "lambda_sns_policy" {
+  name   = "lambda_sns_policy"
+  policy = data.aws_iam_policy_document.lambda_sns_policy.json
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_sns" {
+  role       = aws_iam_role.this.name
+  policy_arn = aws_iam_policy.lambda_sns_policy.arn
+}
 
 resource "aws_cloudwatch_log_group" "this" {
   name              = "/aws/lambda/${var.function_name}"
@@ -55,11 +77,35 @@ resource "aws_cloudwatch_log_group" "this" {
   tags = var.tags
 }
 
+# Build package with dependencies using local-exec
+resource "terraform_data" "lambda_package" {
+  triggers_replace = [
+    filesha256("${var.source_path}/requirements.txt"),
+    filesha256("${var.source_path}/main.py")
+  ]
+
+  provisioner "local-exec" {
+    command = <<EOT
+      mkdir -p ${var.source_path}/package
+      pip install \
+        --platform manylinux2014_x86_64 \
+        --target ${var.source_path}/package \
+        --implementation cp \
+        --python-version ${replace(var.runtime, "python", "")} \
+        --only-binary=:all: \
+        --upgrade \
+        -r ${var.source_path}/requirements.txt
+      cp ${var.source_path}/main.py ${var.source_path}/package/main.py
+    EOT
+  }
+}
+
 # Package the Lambda function code
 data "archive_file" "this" {
   type        = "zip"
-  source_file = "${var.source_path}/main.py"
+  source_dir  = "${var.source_path}/package"
   output_path = "${var.source_path}/function.zip"
+  depends_on  = [terraform_data.lambda_package]
 }
 
 # Lambda function
@@ -83,6 +129,8 @@ resource "aws_lambda_function" "this" {
   depends_on = [
     aws_cloudwatch_log_group.this,
     aws_iam_role_policy_attachment.lambda_basic_execution,
+    aws_iam_role_policy_attachment.lambda_sqs_execution,
+    aws_iam_role_policy_attachment.lambda_dynamodb
   ]
 
   environment {

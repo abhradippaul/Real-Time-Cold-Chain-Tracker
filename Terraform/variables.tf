@@ -85,3 +85,63 @@ variable "sqs_queue_visibility_timeout_seconds" {
   description = "The visibility timeout of the SQS queue."
   default     = 30
 }
+
+variable "dynamodb_table_name" {
+  type        = string
+  description = "The name of the DynamoDB table."
+  default     = "real-time-cold-chain-tracker-table"
+}
+
+variable "dynamodb_hash_key" {
+  type        = string
+  description = "The hash key of the DynamoDB table."
+  default     = "truck_id"
+}
+
+variable "dynamodb_range_key" {
+  type        = string
+  description = "The range key of the DynamoDB table."
+  default     = "timestamp"
+}
+
+variable "sns_name" {
+  type        = string
+  description = "The name of the SNS topic."
+  default     = "real-time-cold-chain-tracker-sns"
+}
+
+variable "database_name" {
+  type        = string
+  description = "The name of the database."
+  default     = "real-time-cold-chain-tracker"
+}
+
+variable "database_username" {
+  type        = string
+  description = "The username of the database."
+  default     = "admin"
+}
+
+variable "database_allocated_storage" {
+  type        = number
+  description = "The allocated storage of the database."
+  default     = 10
+}
+
+variable "database_engine" {
+  type        = string
+  description = "The engine of the database."
+  default     = "mysql"
+}
+
+variable "database_engine_version" {
+  type        = string
+  description = "The engine version of the database."
+  default     = "8.0"
+}
+
+variable "database_instance_class" {
+  type        = string
+  description = "The instance class of the database."
+  default     = "db.t4g.micro"
+}

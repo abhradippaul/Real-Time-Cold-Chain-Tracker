@@ -4,3 +4,4 @@
 venv
 build
 package
+!Diagram.png

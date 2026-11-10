@@ -113,35 +113,47 @@ variable "sns_name" {
 variable "database_name" {
   type        = string
   description = "The name of the database."
-  default     = "real-time-cold-chain-tracker"
+  default     = "temperature"
 }
 
 variable "database_username" {
   type        = string
   description = "The username of the database."
-  default     = "admin"
+  default     = "postgres"
 }
 
 variable "database_allocated_storage" {
   type        = number
   description = "The allocated storage of the database."
-  default     = 10
+  default     = 20
 }
 
 variable "database_engine" {
   type        = string
   description = "The engine of the database."
-  default     = "mysql"
+  default     = "postgres"
 }
 
 variable "database_engine_version" {
   type        = string
   description = "The engine version of the database."
-  default     = "8.0"
+  default     = "18.3"
 }
 
 variable "database_instance_class" {
   type        = string
   description = "The instance class of the database."
   default     = "db.t4g.micro"
+}
+
+variable "database_allowed_cidr_blocks" {
+  type        = list(string)
+  description = "List of CIDR blocks allowed to connect to the database from local or external clients."
+  default     = ["0.0.0.0/0"]
+}
+
+variable "database_identifier" {
+  type        = string
+  description = "The identifier of the database."
+  default     = "real-time-cold-chain-tracker-db"
 }

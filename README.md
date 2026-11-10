@@ -14,13 +14,13 @@ An enterprise-grade, event-driven serverless IoT telemetry pipeline built on AWS
   - [2. Schema & Range Validation (AWS Lambda)](#2-schema--range-validation-aws-lambda)
   - [3. Asynchronous Buffering (Amazon SQS)](#3-asynchronous-buffering-amazon-sqs)
   - [4. Processing & Alerting (AWS Lambda & Amazon SNS)](#4-processing--alerting-aws-lambda--amazon-sns)
-  - [5. Dual-Tier Storage (Amazon DynamoDB & AWS RDS MySQL)](#5-dual-tier-storage-amazon-dynamodb--aws-rds-mysql)
+  - [5. Dual-Tier Storage (Amazon DynamoDB & AWS RDS PostgreSQL)](#5-dual-tier-storage-amazon-dynamodb--aws-rds-postgresql)
 - [Repository Structure](#repository-structure)
 - [Data Schema & Validation Rules](#data-schema--validation-rules)
   - [Telemetry JSON Payload](#telemetry-json-payload)
   - [Validation Criteria](#validation-criteria)
   - [DynamoDB Hot Store Schema](#dynamodb-hot-store-schema)
-  - [MySQL Cold Store Schema](#mysql-cold-store-schema)
+  - [PostgreSQL Cold Store Schema](#postgresql-cold-store-schema)
 - [Getting Started](#getting-started)
   - [Prerequisites](#prerequisites)
   - [Infrastructure Provisioning (Terraform)](#infrastructure-provisioning-terraform)
@@ -90,14 +90,14 @@ The **Real-Time Cold Chain Tracker** solves this challenge with an asynchronous,
 - **Alert Trigger:** Evaluates if `temperature > 5.0°C`.
 - **Notification Target:** `real-time-cold-chain-tracker-sns` publishing to configured email endpoints.
 
-### 5. Dual-Tier Storage (Amazon DynamoDB & AWS RDS MySQL)
+### 5. Dual-Tier Storage (Amazon DynamoDB & AWS RDS PostgreSQL)
 - **Hot Tier (DynamoDB):**
   - Table: `real-time-cold-chain-tracker-table`
   - Billing Mode: `PAY_PER_REQUEST` (On-Demand).
   - Partition Key: `truck_id` (String), Sort Key: `timestamp` (String).
   - Maintains latest active thermal state per transport unit.
-- **Cold Tier (RDS MySQL):**
-  - Engine: MySQL 8.0 on `db.t4g.micro`.
+- **Cold Tier (RDS PostgreSQL):**
+  - Engine: PostgreSQL 16 on `db.t4g.micro`.
   - Schema defined in `temperature_history.sql` for historical trend analysis, compliance reports, and audit trails.
 
 ---
@@ -123,7 +123,7 @@ Real-Time-Cold-Chain-Tracker/
 │   ├── provider.tf                # AWS provider configuration
 │   ├── variables.tf               # Global deployment input variables
 │   └── modules/                   # Reusable infrastructure modules
-│       ├── database/              # RDS MySQL instance
+│       ├── database/              # RDS PostgreSQL instance
 │       ├── dynamodb/              # DynamoDB telemetry table
 │       ├── lambda-processor/      # Processor Lambda, IAM policies, and event source mapping
 │       ├── lambda-validator/      # Validator Lambda, IAM policies, and S3 permissions
@@ -173,21 +173,23 @@ The Validator Lambda applies strict assertions before enqueuing records:
   ExpressionAttributeValues={":ts": ts}
   ```
 
-### MySQL Cold Store Schema
+### PostgreSQL Cold Store Schema
 
 Defined in [`temperature_history.sql`](temperature_history.sql):
 
 ```sql
-CREATE TABLE temperature_history (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS temperature_history (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     truck_id VARCHAR(50) NOT NULL,
     temperature DECIMAL(5,2) NOT NULL,
     location VARCHAR(100),
     humidity DECIMAL(5,2),
-    recorded_at DATETIME NOT NULL,
+    recorded_at TIMESTAMPTZ NOT NULL,
 
-    INDEX idx_truck_time (truck_id, recorded_at)
+    CONSTRAINT uq_truck_recorded_at UNIQUE (truck_id, recorded_at)
 );
+
+CREATE INDEX IF NOT EXISTS idx_truck_time ON temperature_history (truck_id, recorded_at);
 ```
 
 ---

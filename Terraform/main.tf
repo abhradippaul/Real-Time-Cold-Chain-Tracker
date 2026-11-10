@@ -17,18 +17,24 @@ module "lambda_module_validator" {
 module "lambda_module_processor" {
   source = "./modules/lambda-processor"
 
-  function_name = var.lambda_function_name_processor
-  source_path   = var.lambda_source_path_processor
-  handler       = var.lambda_handler
-  runtime       = var.lambda_runtime
-  tags          = var.tags
-  sqs_arn       = module.sqs_module.sqs_queue_arn
-  dynamodb_arn  = module.dynamodb_table_module.arn
-  sns_arn       = module.sns_module.sns_arn
+  function_name       = var.lambda_function_name_processor
+  source_path         = var.lambda_source_path_processor
+  handler             = var.lambda_handler
+  runtime             = var.lambda_runtime
+  tags                = var.tags
+  sqs_arn             = module.sqs_module.sqs_queue_arn
+  dynamodb_arn        = module.dynamodb_table_module.arn
+  sns_arn             = module.sns_module.sns_arn
+  database_secret_arn = module.database_module.database_secret_arn
+  database_name       = var.database_name
   environment_variables = {
     "QUEUE_URL"           = module.sqs_module.sqs_queue_url
     "DYNAMODB_TABLE_NAME" = module.dynamodb_table_module.name
     "TOPIC_ARN"           = module.sns_module.sns_arn
+    "SECRET_ID"           = module.database_module.database_secret_arn
+    "DB_HOST"             = module.database_module.database_address
+    "DB_PORT"             = tostring(module.database_module.database_port)
+    "DB_NAME"             = var.database_name
   }
 }
 
@@ -61,10 +67,16 @@ module "sns_module" {
 }
 
 module "database_module" {
-  source      = "./modules/database"
-  db_name     = var.database_name
-  db_username = var.database_username
-  tags        = var.tags
+  source              = "./modules/database"
+  db_name             = var.database_name
+  db_username         = var.database_username
+  engine              = var.database_engine
+  engine_version      = var.database_engine_version
+  instance_class      = var.database_instance_class
+  allocated_storage   = var.database_allocated_storage
+  allowed_cidr_blocks = var.database_allowed_cidr_blocks
+  database_identifier = var.database_identifier
+  tags                = var.tags
 }
 
 module "s3_bucket_module" {

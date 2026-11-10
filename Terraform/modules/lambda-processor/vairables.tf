@@ -49,3 +49,14 @@ variable "sns_arn" {
   type        = string
   description = "The ARN of the SNS topic."
 }
+
+variable "database_secret_arn" {
+  type        = string
+  description = "The ARN of the database secret in AWS Secrets Manager."
+  default     = ""
+}
+
+variable "database_name" {
+  type        = string
+  description = "The name of the database."
+}

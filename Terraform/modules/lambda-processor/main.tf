@@ -70,6 +70,26 @@ resource "aws_iam_role_policy_attachment" "lambda_sns" {
   policy_arn = aws_iam_policy.lambda_sns_policy.arn
 }
 
+data "aws_iam_policy_document" "lambda_secrets_policy" {
+  statement {
+    effect = "Allow"
+    actions = [
+      "secretsmanager:GetSecretValue"
+    ]
+    resources = var.database_secret_arn != "" ? [var.database_secret_arn] : ["*"]
+  }
+}
+
+resource "aws_iam_policy" "lambda_secrets_policy" {
+  name   = "${var.function_name}_secrets_policy"
+  policy = data.aws_iam_policy_document.lambda_secrets_policy.json
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_secrets" {
+  role       = aws_iam_role.this.name
+  policy_arn = aws_iam_policy.lambda_secrets_policy.arn
+}
+
 resource "aws_cloudwatch_log_group" "this" {
   name              = "/aws/lambda/${var.function_name}"
   retention_in_days = var.log_retention_days
@@ -130,7 +150,9 @@ resource "aws_lambda_function" "this" {
     aws_cloudwatch_log_group.this,
     aws_iam_role_policy_attachment.lambda_basic_execution,
     aws_iam_role_policy_attachment.lambda_sqs_execution,
-    aws_iam_role_policy_attachment.lambda_dynamodb
+    aws_iam_role_policy_attachment.lambda_dynamodb,
+    aws_iam_role_policy_attachment.lambda_sns,
+    aws_iam_role_policy_attachment.lambda_secrets
   ]
 
   environment {
